@@ -7,7 +7,7 @@ import numpy as np
 # =========================================================
 def f(x, y):
     # สมการอนุพันธ์ y' = f(x, y)
-    return (y/x) - ((y/t)**2)   
+    return (y/x) - ((y/x)**2)   
 
 def exact_sol(x):
     # สมการ Exact Solution
