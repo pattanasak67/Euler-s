@@ -2,76 +2,88 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 
-# --- ฟังก์ชันสำหรับผู้ใช้ปรับแก้ตามโจทย์จริง ---
+# =========================================================
+# 📌 ปรับแก้สมการและค่าเริ่มต้นตามโจทย์จริงได้ที่ส่วนนี้
+# =========================================================
 def f(x, y):
-    # ตัวอย่างสมการอนุพันธ์ y' = x + y
-    return x + y 
+    # สมการอนุพันธ์ y' = f(x, y)
+    return x + y  
 
-def get_exact_solution(x):
-    # ตัวอย่างสมการ Exact Solution
-    return 2 * np.exp(x) - x - 1
-# ----------------------------------------
+def exact_sol(x):
+    # สมการ Exact Solution
+    return 2 * np.exp(x) - x - 1  
+
+X0 = 1.0       # ค่า x เริ่มต้น
+Y0 = 2.1272295  # ค่า y เริ่มต้น (y0)
+X_END = 2.0    # ค่า x ปลายทาง
+# =========================================================
 
 # หัวข้อโปรเจกต์
 st.title("Project1# Use the Euler’s to approximate the solutions to the initial-value problems")
+st.markdown("**Exact solution is:** $y(x) = 2e^x - x - 1$")
 
-# 1. Layout Organization: รับค่าพารามิเตอร์ใน Sidebar
-st.sidebar.header("Input Parameters")
-x0 = st.sidebar.number_input("Initial x (x0)", value=0.0)
-y0 = st.sidebar.number_input("Initial y (y0)", value=1.0)
-h = st.sidebar.number_input("Step size (h)", value=0.1)
-n = st.sidebar.number_input("Number of steps (n)", value=10, step=1)
+# 1. st.sidebar รับเฉพาะค่า h (Step size) ตามคำสั่งโจทย์
+st.sidebar.header("Input Parameter")
+h = st.sidebar.number_input(
+    "Step size (h)", 
+    value=0.1, 
+    min_value=0.0001, 
+    max_value=1.0, 
+    step=0.01, 
+    format="%.4f"
+)
 
-# แบ่งเนื้อหาด้วย st.tabs
+# แบ่งเนื้อหาออกเป็น 3 ส่วนด้วย st.tabs
 tab_theory, tab_sim, tab_summary = st.tabs(["ทฤษฎี", "ตัวจำลอง", "สรุปผล"])
 
+# --- Tab 1: ทฤษฎี ---
 with tab_theory:
     st.header("ทฤษฎี (Theory)")
-    st.write("ใส่เนื้อหาและสูตรทางคณิตศาสตร์ของวิธี Euler's Method ที่นี่")
+    st.write("ระบุเนื้อหาและสูตร Euler's Method:")
+    st.latex(r"y_{i+1} = y_i + h \cdot f(x_i, y_i)")
 
+# --- Tab 2: ตัวจำลอง ---
 with tab_sim:
     st.header("ตัวจำลอง (Simulator)")
+    st.info(f"ค่า Step size (h) ที่ระบุ: **{h}**")
     
-    # คำนวณค่า Numerical Solution ด้วยวิธี Euler's Method
-    x_vals = [x0]
-    y_euler = [y0]
-    y_exact_vals = [get_exact_solution(x0)]
-    errors = [abs(y_exact_vals[0] - y_euler[0])]
+    # คำนวณหาคำตอบด้วยวิธี Euler's Method
+    x_vals = []
+    y_euler = []
     
-    curr_x = x0
-    curr_y = y0
+    curr_x = X0
+    curr_y = Y0
     
-    for _ in range(int(n)):
-        curr_y = curr_y + h * f(curr_x, curr_y)
-        curr_x = curr_x + h
-        
-        exact_val = get_exact_solution(curr_x)
-        
-        x_vals.append(curr_x)
+    # วนลูปคำนวณตามช่วง x0 ถึง x_end
+    while curr_x <= X_END + 1e-9:
+        x_vals.append(round(curr_x, 6))
         y_euler.append(curr_y)
-        y_exact_vals.append(exact_val)
-        errors.append(abs(exact_val - curr_y))
+        curr_y = curr_y + h * f(curr_x, curr_y)
+        curr_x += h
         
-    # 2. แสดงกราฟเปรียบเทียบด้วย st.line_chart ของ Streamlit โดยตรง
+    # คำนวณ Exact Solution และค่า Error
+    y_exact = [exact_sol(x) for x in x_vals]
+    errors = [abs(ex - eu) for ex, eu in zip(y_exact, y_euler)]
+    
+    # 2. แสดงกราฟเปรียบเทียบระหว่าง Exact Solution และ Numerical Solution
     st.subheader("Graph Comparison")
     chart_data = pd.DataFrame({
-        "Exact solution": y_exact_vals,
+        "Exact solution": y_exact,
         "Numerical solution (Euler's)": y_euler
     }, index=x_vals)
     st.line_chart(chart_data)
     
-    # 3. ตารางเปรียบเทียบผลลัพธ์
+    # 3. ตารางเปรียบเทียบผลลัพธ์ตาม Format ในโจทย์
     st.subheader("Results Table")
     df_table = pd.DataFrame({
-        "x": x_vals,
-        "Euler's": [f"{val:.7f}" for val in y_euler],
-        "Exact": [f"{val:.7f}" for val in y_exact_vals],
-        "Error": [f"{val:.7f}" for val in errors]
-    })
+        "Euler's": [f"{v:.7f}" for v in y_euler],
+        "Exact": [f"{v:.7f}" for v in y_exact],
+        "Error": [f"{v:.7f}" for v in errors]
+    }, index=[f"{x:.1f}" for x in x_vals])
     
-    df_table.set_index("x", inplace=True)
     st.dataframe(df_table, use_container_width=True)
 
+# --- Tab 3: สรุปผล ---
 with tab_summary:
     st.header("สรุปผล (Conclusion)")
-    st.write("ใส่เนื้อหาสรุปผลการทดลองเปรียบเทียบค่า Error")
+    st.write("ระบุข้อสรุปเกี่ยวกับการเปรียบเทียบค่า Error เมื่อปรับเปลี่ยนค่า h")
