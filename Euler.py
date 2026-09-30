@@ -7,11 +7,11 @@ import numpy as np
 # =========================================================
 def f(x, y):
     # สมการอนุพันธ์ y' = f(x, y)
-    return x + y  
+    return (y/x) - ((y/t)**2)   
 
 def exact_sol(x):
     # สมการ Exact Solution
-    return 2 * np.exp(x) - x - 1  
+    return x/(1+np.log(x))   
 
 X0 = 1.0       # ค่า x เริ่มต้น
 Y0 = 2.1272295  # ค่า y เริ่มต้น (y0)
