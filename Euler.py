@@ -1,89 +1,63 @@
 import streamlit as st
-import pandas as pd
+import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
+st.title('Euler’s Method Approximate')
+#--------------------------------------------------------------------------------------------------------------------
+st.sidebar.header("การตั้งค่าพารามิเตอร์ (Input)")
+h = st.sidebar.number_input("1. กำหนดขนาดก้าว (Step size: h)", min_value=0.001, max_value=0.5, value=0.1, step=0.01, format="%.4f")
+precision = st.sidebar.slider("2. จำนวนตำแหน่งทศนิยมในตาราง (Precision)", min_value=2, max_value=8, value=7)
+plt_style = st.sidebar.selectbox("3. เลือกรูปแบบสไตล์กราฟ (Plot Style)",["default", "ggplot", "bmh", "fivethirtyeight"])
+#--------------------------------------------------------------------------------------------------------------------
+def f(t, y):
+    return (y/t) - (y/t)**2
+def y(t):
+    return t / (1 + np.log(t))
+#main
+t_start = 1.0
+t_end = 2.0
+t_values = np.arange(t_start, t_end + h / 2, h)
+euler_values = [1.0]
+for i in range(len(t_values) - 1):
+    t_curr = t_values[i]
+    y_curr = euler_values[-1]
+    y_next = y_curr + h * f(t_curr, y_curr)
+    euler_values.append(y_next)
+euler_values = np.array(euler_values)
+exact_values = y(t_values)
+errors = np.abs(exact_values - euler_values)
+df = pd.DataFrame({"t_i": t_values, "Euler's": euler_values, "Exact": exact_values, "Error": errors})
+#----------------------------------------------------------------------------------------------------------------------
+tab1 ,tab2, tab3 = st.tabs(["โจทย์", "ตัวจำลองและกราฟ", "ตารางสรุปผล"])
+with tab1:
+    st.subheader('Use the Euler’s to approximate the solutions to the initial-value problems')
+    st.latex(r"y' = \frac{y}{t} - \frac{y^2}{t^2} , \quad 1 \le t \le 2, \quad y(1) = 1")
+    st.subheader('Exact solution is :')
+    st.latex(r"y(t) = \frac{t}{1 + \ln(t)}")
 
-# =========================================================
-# 📌 ปรับแก้สมการและค่าเริ่มต้นตามโจทย์จริงได้ที่ส่วนนี้
-# =========================================================
-def f(x, y):
-    # สมการอนุพันธ์ y' = f(x, y)
-    return (y/x) - ((y/x)**2)   
+with tab2:
+    st.subheader("เปรียบเทียบ Exact Solution และ Numerical Solution")
+    m1, m2, m3 = st.columns(3)
+    m1.metric("ค่า Step Size (h)", f"{h}")
+    m2.metric("Error สูงสุด (Max Error)", f"{np.max(errors):.{precision}f}")
+    m3.metric("Error เฉลี่ย (Mean Error)", f"{np.mean(errors):.{precision}f}")
+    plt.style.use(plt_style)
+    fig, ax = plt.subplots(figsize=(10, 5))
+    t_dense = np.linspace(t_start, t_end, 200)
+    ax.plot(t_dense, y(t_dense), label="Exact Solution", color="b", linewidth=2)
+    ax.plot(t_values, euler_values, "o--", label="Euler's Method", color="r", linewidth=1.5,markersize=5)
+    ax.set_title(f"Euler's Method Approximate (h = {h})", fontsize=14)
+    ax.set_xlabel("t", fontsize=12)
+    ax.set_ylabel("y(t)", fontsize=12)
+    ax.legend()
+    ax.grid(True, linestyle="--", alpha=0.6)
+    st.pyplot(fig)
 
-def exact_sol(x):
-    # สมการ Exact Solution
-    return x/(1+np.log(x))   
-
-X0 = 1.0       # ค่า x เริ่มต้น
-Y0 = 2.1272295  # ค่า y เริ่มต้น (y0)
-X_END = 2.0    # ค่า x ปลายทาง
-# =========================================================
-
-# หัวข้อโปรเจกต์
-st.title("Project1# Use the Euler’s to approximate the solutions to the initial-value problems")
-st.markdown("**Exact solution is:** $y(x) = 2e^x - x - 1$")
-
-# 1. st.sidebar รับเฉพาะค่า h (Step size) ตามคำสั่งโจทย์
-st.sidebar.header("Input Parameter")
-h = st.sidebar.number_input(
-    "Step size (h)", 
-    value=0.1, 
-    min_value=0.0001, 
-    max_value=1.0, 
-    step=0.01, 
-    format="%.4f"
-)
-
-# แบ่งเนื้อหาออกเป็น 3 ส่วนด้วย st.tabs
-tab_theory, tab_sim, tab_summary = st.tabs(["ทฤษฎี", "ตัวจำลอง", "สรุปผล"])
-
-# --- Tab 1: ทฤษฎี ---
-with tab_theory:
-    st.header("ทฤษฎี (Theory)")
-    st.write("ระบุเนื้อหาและสูตร Euler's Method:")
-    st.latex(r"y_{i+1} = y_i + h \cdot f(x_i, y_i)")
-
-# --- Tab 2: ตัวจำลอง ---
-with tab_sim:
-    st.header("ตัวจำลอง (Simulator)")
-    st.info(f"ค่า Step size (h) ที่ระบุ: **{h}**")
-    
-    # คำนวณหาคำตอบด้วยวิธี Euler's Method
-    x_vals = []
-    y_euler = []
-    
-    curr_x = X0
-    curr_y = Y0
-    
-    # วนลูปคำนวณตามช่วง x0 ถึง x_end
-    while curr_x <= X_END + 1e-9:
-        x_vals.append(round(curr_x, 6))
-        y_euler.append(curr_y)
-        curr_y = curr_y + h * f(curr_x, curr_y)
-        curr_x += h
-        
-    # คำนวณ Exact Solution และค่า Error
-    y_exact = [exact_sol(x) for x in x_vals]
-    errors = [abs(ex - eu) for ex, eu in zip(y_exact, y_euler)]
-    
-    # 2. แสดงกราฟเปรียบเทียบระหว่าง Exact Solution และ Numerical Solution
-    st.subheader("Graph Comparison")
-    chart_data = pd.DataFrame({
-        "Exact solution": y_exact,
-        "Numerical solution (Euler's)": y_euler
-    }, index=x_vals)
-    st.line_chart(chart_data)
-    
-    # 3. ตารางเปรียบเทียบผลลัพธ์ตาม Format ในโจทย์
-    st.subheader("Results Table")
-    df_table = pd.DataFrame({
-        "Euler's": [f"{v:.7f}" for v in y_euler],
-        "Exact": [f"{v:.7f}" for v in y_exact],
-        "Error": [f"{v:.7f}" for v in errors]
-    }, index=[f"{x:.1f}" for x in x_vals])
-    
-    st.dataframe(df_table, use_container_width=True)
-
-# --- Tab 3: สรุปผล ---
-with tab_summary:
-    st.header("สรุปผล (Conclusion)")
-    st.write("ระบุข้อสรุปเกี่ยวกับการเปรียบเทียบค่า Error เมื่อปรับเปลี่ยนค่า h")
+with tab3:
+    st.subheader(f"ตารางเปรียบเทียบค่าที่คำนวณได้ (h = {h})")
+    df_display = df.copy()
+    df_display["t_i"] = df_display["t_i"].map(lambda x: f"{x:.2f}")
+    df_display["Euler's"] = df_display["Euler's"].map(lambda x: f"{x:.{precision}f}")
+    df_display["Exact"] = df_display["Exact"].map(lambda x: f"{x:.{precision}f}")
+    df_display["Error"] = df_display["Error"].map(lambda x: f"{x:.{precision}f}")
+    st.dataframe(df_display, use_container_width=True)
